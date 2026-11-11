@@ -1,0 +1,123 @@
+# CEW Testbed Configuration
+seed: 42
+num_workers: 4
+device: "cpu"  # or "cuda"
+
+# Synthetic Data Generation
+data:
+  frame_length: 1024
+  num_classes: 10
+  known_classes: [0, 1, 2, 3, 4, 5, 6]  # Indices of known modulation types
+  unknown_classes: [7, 8, 9]  # Held-out for open-set evaluation
+  class_names: ["BPSK", "QPSK", "8PSK", "16QAM", "64QAM", "GFSK", "CPFSK", "4-FSK", "AM-DSB", "WBFM"]
+  snr_range: [-10, 20]
+  impulse_response_length: 5
+  rrc_rolloff: 0.35
+
+  # RTL-SDR impairments
+  iq_imbalance_std: 0.02
+  dc_offset_std: 0.01
+  adc_bits: 8
+
+  # Fading
+  fading_enabled: true
+  multipath_spread: [0, 3]  # number of taps
+  doppler_freq: 10  # Hz
+
+  # Train/val/test split ratios (by SNR-stratification)
+  split_ratio: [0.7, 0.15, 0.15]
+
+# FH Sequences
+fh:
+  num_hop_bins: 16
+  hop_pattern_length: 50
+  dwell_time_frames: [1, 2, 3, 4]
+  hop_randomness: 0.7  # PN-based vs structured
+
+# Threat Assessment
+threat:
+  sequence_length: 20
+  feature_dim: 8  # class_probs(10) + unknown(1) + snr(1) + power(1) + bandwidth(1) + hop_rate(1)
+  classes: ["benign", "suspicious", " hostile"]
+
+# CNN Model (Modulation Recognition)
+cnn:
+  input_channels: 2
+  num_classes: 10
+  dropout: 0.3
+  learning_rate: 0.001
+  batch_size: 64
+  epochs: 50
+  early_stopping_patience: 10
+  label_smoothing: 0.1
+  checkpoint_path: "checkpoints/cnn_best.pt"
+
+# OpenMax
+openmax:
+  alpha: 3
+  tail_size: 20
+  distance_type: "euclidean"
+  reject_threshold: 0.5
+  weibull_fit_path: "checkpoints/weibull_params.pkl"
+
+# FH Transformer
+fh_transformer:
+  input_dim: 3  # freq_bin_idx + dwell_time + power
+  d_model: 64
+  num_heads: 4
+  num_layers: 2
+  dropout: 0.2
+  learning_rate: 0.001
+  batch_size: 32
+  epochs: 30
+  context_window: 10
+  predict_horizon: 3
+  checkpoint_path: "checkpoints/fh_transformer.pt"
+
+# LSTM Threat Assessor
+lstm_threat:
+  input_dim: 8
+  hidden_dim: 64
+  num_layers: 2
+  bidirectional: true
+  dropout: 0.3
+  learning_rate: 0.001
+  batch_size: 32
+  epochs: 30
+  class_weights: [1.0, 2.0, 3.0]  # benign, suspicious, hostile
+  checkpoint_path: "checkpoints/lstm_threat.pt"
+
+# Decision Engine
+decision:
+  tau_unknown: 0.4
+  tau_threat: 0.6
+  hysteresis_frames: 5
+  debounce_time_ms: 1000
+  categories:
+    - "KNOWN_THREAT"
+    - "UNKNOWN_SIGNAL"
+    - "NON_THREATENING"
+  actions:
+    - "COUNTER"
+    - "MONITOR"
+    - "ALERT"
+    - "IGNORE"
+
+# Inference Pipeline
+pipeline:
+  queue_size: 100
+  torchscript_compile: false
+
+# Dashboard
+dashboard:
+  refresh_rate_Hz: 5
+  waterfall_buffer_frames: 200
+  decision_log_rows: 100
+  zmq_port: 5555
+
+# Paths
+paths:
+  synthetic_data: "data/synthetic/"
+  radioml_path: "data/radioml_2018.01A.h5"
+  log_dir: "logs/"
+  tensorboard_dir: "runs/"

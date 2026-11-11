@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+venv/
+*.egg-info/
+.pytest_cache/
+data/radioml_2018.01A.h5
+data/raw/
+checkpoints/
+logs/
+runs/
+.vscode/
+.idea/
+.DS_Store
+.env
+wandb/
